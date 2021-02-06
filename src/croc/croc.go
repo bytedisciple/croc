@@ -18,20 +18,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/denisbrodbeck/machineid"
 	log "github.com/schollz/logger"
 	"github.com/schollz/pake/v2"
 	"github.com/schollz/peerdiscovery"
 	"github.com/schollz/progressbar/v3"
 	"github.com/tscholl2/siec"
 
-	"github.com/schollz/croc/v8/src/comm"
-	"github.com/schollz/croc/v8/src/compress"
-	"github.com/schollz/croc/v8/src/crypt"
-	"github.com/schollz/croc/v8/src/message"
-	"github.com/schollz/croc/v8/src/models"
-	"github.com/schollz/croc/v8/src/tcp"
-	"github.com/schollz/croc/v8/src/utils"
+	"github.com/bytedisciple/croc/v8/src/comm"
+	"github.com/bytedisciple/croc/v8/src/compress"
+	"github.com/bytedisciple/croc/v8/src/crypt"
+	"github.com/bytedisciple/croc/v8/src/message"
+	"github.com/bytedisciple/croc/v8/src/models"
+	"github.com/bytedisciple/croc/v8/src/tcp"
+	"github.com/bytedisciple/croc/v8/src/utils"
 )
 
 func init() {
@@ -135,13 +134,11 @@ type FileInfo struct {
 type RemoteFileRequest struct {
 	CurrentFileChunkRanges    []int64
 	FilesToTransferCurrentNum int
-	MachineID                 string
 }
 
 // SenderInfo lists the files to be transferred
 type SenderInfo struct {
 	FilesToTransfer []FileInfo
-	MachineID       string
 	Ask             bool
 	SendingText     bool
 	NoCompress      bool
@@ -359,8 +356,7 @@ func (c *Client) Send(options TransferOptions) (err error) {
 	}
 	fmt.Fprintf(os.Stderr, "Code is: %[1]s\nOn the other computer run\n\ncroc %[2]s%[1]s\n", c.Options.SharedSecret, flags.String())
 	if c.Options.Ask {
-		machid, _ := machineid.ID()
-		fmt.Fprintf(os.Stderr, "\rYour machine ID is '%s'\n", machid)
+		fmt.Fprintf(os.Stderr, "\rYour machine ID is '%s'\n", "machineID")
 	}
 	// // c.spinner.Suffix = " waiting for recipient..."
 	// c.spinner.Start()
@@ -790,8 +786,7 @@ func (c *Client) processMessageFileInfo(m message.Message) (done bool, err error
 	}
 	if !c.Options.NoPrompt || c.Options.Ask || senderInfo.Ask {
 		if c.Options.Ask || senderInfo.Ask {
-			machID, _ := machineid.ID()
-			fmt.Fprintf(os.Stderr, "\rYour machine id is '%s'.\nAccept %s (%s) from '%s'? (y/n) ", machID, fname, utils.ByteCountDecimal(totalSize), senderInfo.MachineID)
+			fmt.Fprintf(os.Stderr, "\rYour machine id is '%s'.\nAccept %s (%s) from '%s'? (y/n) ", "machineID", fname, utils.ByteCountDecimal(totalSize), "senderInfo")
 		} else {
 			fmt.Fprintf(os.Stderr, "\rAccept %s (%s)? (y/n) ", fname, utils.ByteCountDecimal(totalSize))
 		}
@@ -987,7 +982,7 @@ func (c *Client) processMessage(payload []byte) (done bool, err error) {
 		c.Step3RecipientRequestFile = true
 
 		if c.Options.Ask {
-			fmt.Fprintf(os.Stderr, "Send to machine '%s'? (y/n) ", remoteFile.MachineID)
+			fmt.Fprintf(os.Stderr, "Send to machine '%s'? (y/n) ", "machineID")
 			if strings.ToLower(strings.TrimSpace(utils.GetInput(""))) != "y" {
 				err = message.Send(c.conn[0], c.Key, message.Message{
 					Type:    "error",
@@ -1026,10 +1021,8 @@ func (c *Client) processMessage(payload []byte) (done bool, err error) {
 func (c *Client) updateIfSenderChannelSecured() (err error) {
 	if c.Options.IsSender && c.Step1ChannelSecured && !c.Step2FileInfoTransfered {
 		var b []byte
-		machID, _ := machineid.ID()
 		b, err = json.Marshal(SenderInfo{
 			FilesToTransfer: c.FilesToTransfer,
-			MachineID:       machID,
 			Ask:             c.Options.Ask,
 			SendingText:     c.Options.SendingText,
 			NoCompress:      c.Options.NoCompress,
@@ -1126,11 +1119,9 @@ func (c *Client) recipientGetFileReady(finished bool) (err error) {
 	}
 
 	c.TotalSent = 0
-	machID, _ := machineid.ID()
 	bRequest, _ := json.Marshal(RemoteFileRequest{
 		CurrentFileChunkRanges:    c.CurrentFileChunkRanges,
 		FilesToTransferCurrentNum: c.FilesToTransferCurrentNum,
-		MachineID:                 machID,
 	})
 	log.Debug("converting to chunk range")
 	c.CurrentFileChunks = utils.ChunkRangesToChunks(c.CurrentFileChunkRanges)
